@@ -1,5 +1,5 @@
 /*
- * cc_of_msg_action functions.
+ * cc_log functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -17,12 +17,33 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef CC_MAIN_H_
-#define CC_MAIN_H_ 1
-
 #include "cc_log.h"
-#include "cc_init_of.h"
-#include "cc_error.h"
 
-#endif
+int log_err_for_cc(char *event)
+{
+	openlog(LOG_ERR_CC,LOG_CONS|LOG_PID,LOG_USER);
+	syslog(LOG_ERR,event);
+	closelog();
+}
+
+int log_info_for_cc(char *event)
+{
+	openlog(LOG_INFO_CC,LOG_CONS|LOG_PID,LOG_USER);
+	syslog(LOG_INFO,event);  //event sprintf(event,"dpid id %s",dpid)
+	closelog();
+}
+
+int log_warning_for_cc(char *event)
+{
+	openlog(LOG_WARNING_CC,LOG_CONS|LOG_PID,LOG_USER);
+	syslog(LOG_WARNING,event);  //event sprintf(event,"dpid id %s",dpid)
+	closelog();
+}
+
+int log_debug_for_cc(char *event)
+{
+	openlog(LOG_DEBUG_CC,LOG_CONS|LOG_PID,LOG_USER);
+	syslog(LOG_DEBUG,event);  //event sprintf(event,"dpid id %s",dpid)
+	closelog();
+}
 

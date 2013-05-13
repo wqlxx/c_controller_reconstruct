@@ -122,9 +122,7 @@ thread_routine (void *arg)
 {   
 	pthread_detach(pthread_self());
 	CThread_pool* pool = (CThread_pool*)arg;
-#ifdef DEBUG
 	printf ("starting thread 0x%x\n", pthread_self ());   
-#endif
     while(1)   
     {   
         pthread_mutex_lock (&(pool->queue_lock));   

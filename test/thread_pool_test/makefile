@@ -22,4 +22,4 @@ cc_log.o : cc_log.c cc_log.h
 
 .PHONY : clean
 clean :
-	-rm test_cc_thread_pool *.o
+	-rm test_cc_queue *.o

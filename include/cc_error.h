@@ -1,6 +1,5 @@
-#ifndef CC_ERROR_
-#define CC_ERROR_ 1
-
+#ifndef CC_ERROR
+#define CC_ERROR 1
 enum error_code{
 	CC_E_ERR = -1,
     CC_E_NONE 
