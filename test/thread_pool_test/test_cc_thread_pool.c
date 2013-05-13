@@ -10,8 +10,7 @@ char* sample_string[10] = {"hi","this","is","test"};
 
 void *myprocess (void *arg)   
 {   
-     printf ("threadid is 0x%x, the msg in queue is %s\n", pthread_self (),(char*)arg);   
-     sleep (1);
+     printf("threadid is 0x%x, the msg in queue is %s\n", pthread_self (),(char*)arg);   
      return NULL;   
 }   
 
@@ -27,10 +26,11 @@ int main (int argc, char **argv)
     {    
 		pool_add_worker(tmp_pool, myprocess, (void*)sample_string[i]);
 		i++;
+        sleep(1);
         tmp_char = sample_string[i];
     }
-    pool_destroy(tmp_pool);
 
+    pool_destroy(tmp_pool);
     return 0;
 /* test for socket and thread pool*/
 #if 0
