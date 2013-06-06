@@ -1,5 +1,5 @@
 /*
- * cc_log functions.
+ * cc_time functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -17,34 +17,23 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
- 
-#include "cc_log.h"
+#ifndef CC_TIMER_H
+#define CC_TIMER_H 1
 
-int log_err_for_cc(char *event)
-{
-	openlog(LOG_ERR_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_ERR,event);
-	closelog();
-}
+#include <sys/select.h>
+#include <sys/time.h>
+#include <time.h>
+#include "cc_basic.h"
 
-int log_info_for_cc(char *event)
-{
-	openlog(LOG_INFO_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_INFO,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
+/* ECHO TIMEOUT has no exactly define,In trema ,i see it is 60s*/
+#define CC_ECHO_MAX_INTERVAL 10 //10 use to as a connection checker
+#define CC_FEATURE_REPLY_MAX_INTERVAL 10
 
-int log_warning_for_cc(char *event)
-{
-	openlog(LOG_WARNING_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_WARNING,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
+int cc_timer_check(struct timeval* start_tv, struct timeval* now_tv);
 
-int log_debug_for_cc(char *event)
-{
-	openlog(LOG_DEBUG_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_DEBUG,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
+int cc_timer_start(struct timeval* tv);
+
+int cc_timer_expire(struct timeval* tv);
+
+#endif
 

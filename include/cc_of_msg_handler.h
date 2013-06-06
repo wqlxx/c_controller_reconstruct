@@ -1,5 +1,5 @@
 /*
- * cc_log functions.
+ * cc_of_msg_handler functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -17,34 +17,32 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
- 
+
+#ifndef CC_OF_MSG_HANDLER_H
+#define CC_OF_MSG_HANDLER_H 1
+
+#include "cc_secure_channel_recv.h"
+#include "cc_secure_channel_send.h"
+#include "cc_buffer.h"
+#include "cc_queue.h"
 #include "cc_log.h"
 
-int log_err_for_cc(char *event)
-{
-	openlog(LOG_ERR_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_ERR,event);
-	closelog();
-}
+struct msg_for_app {
+	buffer* buf;
+	uint64_t dpid;
+};
+typedef struct msg_for_app msg_for_app;
 
-int log_info_for_cc(char *event)
-{
-	openlog(LOG_INFO_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_INFO,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
 
-int log_warning_for_cc(char *event)
-{
-	openlog(LOG_WARNING_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_WARNING,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
 
-int log_debug_for_cc(char *event)
-{
-	openlog(LOG_DEBUG_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_DEBUG,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
+int cc_of_handler_recv_event(sw_info* cc_sw_info);
+
+int cc_of_handler_send_event(sw_info* cc_sw_info);
+
+int cc_of_handler_recv_app_request(uint8_t type_, buffer* buf);
+
+int cc_of_handler_send_to_app(message_queue* app_queue);
+
+
+#endif//END OF CC_OF_MSG_HANDLER_H
 

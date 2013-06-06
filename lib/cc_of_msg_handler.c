@@ -1,5 +1,5 @@
 /*
- * cc_log functions.
+ * cc_of_msg_handler functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -17,34 +17,56 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
- 
-#include "cc_log.h"
 
-int log_err_for_cc(char *event)
+#include "cc_of_msg_handler.h"
+
+
+int 
+cc_of_handler_recv_event(message_queue *mq)
 {
-	openlog(LOG_ERR_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_ERR,event);
-	closelog();
+	int ret;
+	ret = cc_secure_channel_read(mq);
+	if( ret < 0 )
+	{
+		log_err_for_cc("recv_from_secure_channel error!");
+		return CC_E_ERR;
+	}
+
+	return CC_E_NONE;
 }
 
-int log_info_for_cc(char *event)
+
+int
+cc_of_handler_send_event(message_queue *mq)
 {
-	openlog(LOG_INFO_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_INFO,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
+	int ret;
+	
+	ret = cc_flush_to_secure_channel(mq);
+	if( ret < 0 )
+	{
+		log_err_for_cc("cc_flush_to_secure_channel error");
+		return CC_E_ERR;
+	}
+
+	return CC_E_NONE;
 }
 
-int log_warning_for_cc(char *event)
+
+int
+cc_of_handler_recv_app_request(uint8_t type_, buffer* buf)
 {
-	openlog(LOG_WARNING_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_WARNING,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
+	/*parse the request from app*/
+	return CC_E_NONE;
 }
 
-int log_debug_for_cc(char *event)
+
+int
+cc_of_handler_send_to_app(message_queue* app_queue)
 {
-	openlog(LOG_DEBUG_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_DEBUG,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
+	int ret;
+	/*shared memory*/
+	return CC_E_NONE;
 }
+
+#endif
 

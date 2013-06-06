@@ -24,6 +24,15 @@
 #include <stdlib.h>
 #include <syslog.h>
 
+/**************************************/s
+/*
+ *	NOTICE here we use a macro define to help to test
+ *  if we want to release a official version. we should delete it
+ */
+#define DEBUG 1
+/***************************************/
+
+
 #define LOG_ERR_CC     "log_err_for_cc:" 
 #define LOG_INFO_CC    "log_info_for_cc:" 
 #define LOG_WARNING_CC "log_warning_for_cc:" 

@@ -1,5 +1,5 @@
 /*
- * cc_log functions.
+ * cc_secure_channel_send functions.
  *
  * Author: qiang wang <wqlxx@yahoo.com.cn>
  *
@@ -17,34 +17,25 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
- 
+
+#ifndef CC_SECURE_CHANNEL_SEND_H
+#define CC_SECURE_CHANNEL_SEND_H 1
+
+#include "cc_of_msg_send.h"
+#include "cc_queue.h"
+#include "cc_buffer.h"
 #include "cc_log.h"
+#include "cc_of_msg_prep.h"
+#include "cc_error.h"
 
-int log_err_for_cc(char *event)
-{
-	openlog(LOG_ERR_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_ERR,event);
-	closelog();
-}
+typedef int (*FUNC_CB_S)(sw_info* , buffer*);
 
-int log_info_for_cc(char *event)
-{
-	openlog(LOG_INFO_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_INFO,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
+FUNC_CB_S  cc_select_send_func(uint16_t type);
 
-int log_warning_for_cc(char *event)
-{
-	openlog(LOG_WARNING_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_WARNING,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
+int cc_send_to_secure_channel(sw_info* cc_sw_info,buffer* buf);
 
-int log_debug_for_cc(char *event)
-{
-	openlog(LOG_DEBUG_CC,LOG_CONS|LOG_PID,LOG_USER);
-	syslog(LOG_DEBUG,event);  //event sprintf(event,"dpid id %s",dpid)
-	closelog();
-}
+int cc_send_to_secure_channel_app(sw_info* cc_sw_info,buffer* buf);
 
+int cc_flush_to_secure_channel(sw_info* cc_sw_info);
+
+#endif
