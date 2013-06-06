@@ -20,7 +20,7 @@
 
 #include "cc_of_msg_recv.h"
 
-
+#if 0//move to cc_of_msg_create.c
 int
 cc_insert_to_send_queue(message_queue *smq, buffer* buf)
 {
@@ -46,7 +46,7 @@ cc_insert_to_app_queue(message_queue *asq, buffer* buf)
 	free_buffer(buf);
 	return CC_E_ERR;
 }
-
+#endif
 
 char*
 cc_dump_flow(struct flow* flow,uint32_t wildcards)
@@ -144,15 +144,15 @@ cc_dump_flow(struct flow* flow,uint32_t wildcards)
 }
 
 /**/
-int
-cc_recv_hello_msg(ofmsg_recv_t *ort)
+static int
+cc_recv_hello_msg(trans_info_t *tit)
 {
 	int ret;
 	buffer* recv_data;
 	buffer* send_buf;
 	struct ofp_hello oh;
     
-	recv_data = dequeue_message(ort->rmq);
+	recv_data = tit->recv_buf->data;
 	validate_hello(recv_data);
 	if( ret < 0 )
 	{
@@ -161,9 +161,9 @@ cc_recv_hello_msg(ofmsg_recv_t *ort)
 	}
 	log_info_for_cc("recv a hello message");
 	oh = (struct ofp_hello*)recv_data;
-    *(ort->xid_latest) = ntohl(oh->header.xid) + 1;
+    *(tit->xid_latest) = ntohl(oh->header.xid) + 1;
     
-	send_buf = cc_create_features_request(*(ort->xid_latest));
+	send_buf = cc_create_features_request(*(tit->xid_latest));
 	if(send_buf == NULL)
 	{
 		log_err_for_cc("cc_insert_to_send_queue error!");		
@@ -171,7 +171,7 @@ cc_recv_hello_msg(ofmsg_recv_t *ort)
 		return CC_E_ERR;
 	}
 	
-	ret = cc_insert_to_send_queue(ort->smq, send_buf);
+	ret = cc_insert_to_send_queue(tit->send_queue, send_buf);
 	if(ret < 0)
 	{
 		log_err_for_cc("cc_insert_to_send_queue error!");
@@ -184,12 +184,12 @@ cc_recv_hello_msg(ofmsg_recv_t *ort)
 }
 
 
-int
-cc_recv_err_msg(ofmsg_recv_t *ort)
+static int
+cc_recv_err_msg(trans_info_t *tit)
 {
 	buffer* recv_data;
 
-	recv_data = dequeue_message(ort->rmq);	
+	recv_data = tit->recv_buf;	
 	struct ofp_error_msg *ofp_err;
 	struct flow err_flow;
 	char *str;
@@ -205,7 +205,7 @@ cc_recv_err_msg(ofmsg_recv_t *ort)
 	}
 	log_info_for_cc("recv a error message");
 	ofp_err = (struct ofp_error_msg*)(recv_data->data);
-    *(ort->xid_latest) = htonl(ofp_err->header.xid) + 1;
+    *(tit->xid_latest) = htonl(ofp_err->header.xid) + 1;
 
 	switch(ntohs(ofp_err->type))
 	{
@@ -218,16 +218,16 @@ cc_recv_err_msg(ofmsg_recv_t *ort)
 		case OFPET_FLOW_MOD_FAILED:      /* Problem modifying flow entry. */
 			{
 				err_flow.in_port = ofm->match.in_port;
-           			memcpy(err_flow.dl_src, ofm->match.dl_src, sizeof ofm->match.dl_src);
-            			memcpy(err_flow.dl_dst, ofm->match.dl_dst, sizeof ofm->match.dl_dst);
-            			err_flow.dl_vlan = ofm->match.dl_vlan;
-            			err_flow.dl_type = ofm->match.dl_type;
-            			err_flow.dl_vlan_pcp = ofm->match.dl_vlan_pcp;
-            			err_flow.nw_src = ofm->match.nw_src;
-            			err_flow.nw_dst = ofm->match.nw_dst;
-            			err_flow.nw_proto = ofm->match.nw_proto;
-            			err_flow.tp_src = ofm->match.tp_src;
-            			err_flow.tp_dst = ofm->match.tp_dst;
+           		memcpy(err_flow.dl_src, ofm->match.dl_src, sizeof ofm->match.dl_src);
+            	memcpy(err_flow.dl_dst, ofm->match.dl_dst, sizeof ofm->match.dl_dst);
+            	err_flow.dl_vlan = ofm->match.dl_vlan;
+            	err_flow.dl_type = ofm->match.dl_type;
+            	err_flow.dl_vlan_pcp = ofm->match.dl_vlan_pcp;
+            	err_flow.nw_src = ofm->match.nw_src;
+            	err_flow.nw_dst = ofm->match.nw_dst;
+            	err_flow.nw_proto = ofm->match.nw_proto;
+            	err_flow.tp_src = ofm->match.tp_src;
+            	err_flow.tp_dst = ofm->match.tp_dst;
 
 				cc_dump_flow(&err_flow,wildcards);
 				break;
@@ -240,8 +240,8 @@ cc_recv_err_msg(ofmsg_recv_t *ort)
 }
 
 
-int
-cc_recv_echo_request(ofmsg_recv_t ort)
+static int
+cc_recv_echo_request(trans_info_t *tit)
 {
 	buffer* recv_data;
 	uint32_t xid;
@@ -250,7 +250,7 @@ cc_recv_echo_request(ofmsg_recv_t ort)
 	buffer* send_buf;
 	struct ofp_header *header;
 
-	recv_data = dequeue_message(ort->rmq);	
+	recv_data = tit->recv_buf;	
 	ret = validate_echo_request(recv_data);
 	if( ret < 0 )
 	{
@@ -261,7 +261,7 @@ cc_recv_echo_request(ofmsg_recv_t ort)
 	header = (struct ofp_header *)(recv_data->data);
 	xid = header->xid;
 	length = header->length;
-    *(ort->xid_latest) = ntohl(xid) + 1;
+    *(tit->xid_latest) = ntohl(xid) + 1;
 	log_info_for_cc("recv a echo request message");
 
 	//*xid_latest = xid;// here we need to fix the bug
@@ -276,7 +276,7 @@ cc_recv_echo_request(ofmsg_recv_t ort)
 		return CC_E_ERR;
 	}
 	
-	ret = cc_insert_to_send_queue(ort->smq, send_buf);
+	ret = cc_insert_to_send_queue(tit->send_queue, send_buf);
 	if( ret < 0 )
 	{
 		log_err_for_cc("cc_insert_to_send_queue error!");
@@ -289,8 +289,8 @@ cc_recv_echo_request(ofmsg_recv_t ort)
 }
 
 
-int
-cc_recv_echo_reply(ofmsg_recv_t *ort)
+static int
+cc_recv_echo_reply(trans_info_t *tit)
 {
 	int ret;
 	buffer* send_buf;
@@ -299,7 +299,7 @@ cc_recv_echo_reply(ofmsg_recv_t *ort)
 	xid_entry *recv_xid;
     struct ofp_header *oer;
 
-	recv_data = dequeue_message(ort->rmq);	
+	recv_data = tit->recv_buf;	
 	ret = validate_echo_reply(recv_data);
 	if(ret < 0)
 	{
@@ -311,14 +311,14 @@ cc_recv_echo_reply(ofmsg_recv_t *ort)
  	struct ofp_header* header = (struct ofp_header*)(recv_data->data);	   
     oer = (struct ofp_header*)(recv_data->data);
     xid = ntohl(oer->header.xid);
-    if(!(recv_xid = cc_lookup_xid_entry(ort->xid_table_, xid))){
+    if(!(recv_xid = cc_lookup_xid_entry(tit->xid_table_, xid))){
         free_buffer(recv_data);
         return CC_E_ERR;
     }
-	CC_ERROR_RETURN(cc_delete_xid_entry(ort->xid_table_, recv_xid));
-	*(ort->xid_lateet) = xid + 1;
+	CC_ERROR_RETURN(cc_delete_xid_entry(tit->xid_table_, recv_xid));
+	*(tit->xid_latest) = xid + 1;
 
-	send_buf = cc_create_echo_request(ort->xid_latest, recv_data);
+	send_buf = cc_create_echo_request(tit->xid_latest, recv_data);
 	if(send_buf == NULL)
 	{
 		log_err_for_cc("cc_insert_to_send_queue error!");			
@@ -326,7 +326,7 @@ cc_recv_echo_reply(ofmsg_recv_t *ort)
 		return CC_E_ERR;
 	}
 		
-	ret = cc_insert_to_send_queue(ort->smq, send_buf);
+	ret = cc_insert_to_send_queue(tit->send_queue, send_buf);
 	if(ret < 0)
 	{
 		log_err_for_cc("cc_insert_to_send_queue error!");
@@ -340,14 +340,14 @@ cc_recv_echo_reply(ofmsg_recv_t *ort)
 }
 
 
-int
-cc_recv_vendor(ofmsg_recv_t *ort)
+static int
+cc_recv_vendor(trans_info_t *tit)
 {
 	int ret;
 	buffer* recv_data;
 	struct ofp_vendor_header *ovh;
 
-	recv_data = dequeue_message(ort->rmq);	
+	recv_data = tit->recv_buf;	
 	ret = validate_vendor(recv_data);
 	if(ret < 0)
 	{
@@ -356,9 +356,9 @@ cc_recv_vendor(ofmsg_recv_t *ort)
 	}
 	log_info_for_cc("recv a vendor msg");
 	ovh = (struct ofp_vendor_header*)(recv_data->data);
-	*(ort->xid_latest) = ntohl(ovh->header.xid) + 1;
+	*(tit->xid_latest) = ntohl(ovh->header.xid) + 1;
     
-	ret = cc_insert_to_app_queue(amq, recv_data);
+	ret = cc_insert_to_app_queue(tit->app_queue, recv_data);
 	if(ret < 0)
 	{
 		log_err_for_cc("cc_insert_to_app_queue error!");
@@ -370,8 +370,8 @@ cc_recv_vendor(ofmsg_recv_t *ort)
 }
 
 
-int
-cc_recv_get_config_reply(ofmsg_recv_t *ort)
+static int
+cc_recv_get_config_reply(trans_info_t *tit)
 {
 	
 	/* DO NOTHING*/
@@ -381,7 +381,7 @@ cc_recv_get_config_reply(ofmsg_recv_t *ort)
 	struct ofp_queue_get_config_reply *oqgcr;
 	xid_entry *recv_xid;
 
-	recv_data = dequeue_message(ort->rmq);	
+	recv_data = tit->recv_buf;	
 	ret = validate_get_config_reply(recv_data);
 	if(ret < 0)
 	{
@@ -391,14 +391,14 @@ cc_recv_get_config_reply(ofmsg_recv_t *ort)
 	log_info_for_cc("recv a get config reply");
     
     oqgcr = (struct ofp_queue_get_config_reply *)(recv_data->data);
-    if(!(recv_xid = cc_lookup_xid_entry(ort->xid_table_, oqgcr->header.xid))){
+    if(!(recv_xid = cc_lookup_xid_entry(tit->xid_table_, oqgcr->header.xid))){
         free_buffer(recv_data);
         return CC_E_ERR;
     }
-	CC_ERROR_RETURN(cc_delete_xid_entry(ort->xid_table_, recv_xid));
-   	*(ort->xid_latest) = ntohl(oqgcr->header.xid) + 1;
+	CC_ERROR_RETURN(cc_delete_xid_entry(tit->xid_table_, recv_xid));
+   	*(tit->xid_latest) = ntohl(oqgcr->header.xid) + 1;
 
-	send_buf = cc_create_echo_request(*(ort->xid_latest), recv_data);
+	send_buf = cc_create_echo_request(*(tit->xid_latest), recv_data);
 	if(send_buf == NULL)
 	{
 		log_err_for_cc("cc_create_echo_request error!");
@@ -406,7 +406,7 @@ cc_recv_get_config_reply(ofmsg_recv_t *ort)
 		return CC_E_ERR;
 	}
 	
-	ret = cc_insert_to_send_queue(ort->smq, send_buf);
+	ret = cc_insert_to_send_queue(tit->send_queue, send_buf);
 	if(ret < 0)
 	{
 		log_err_for_cc("cc_insert_echo_request error!");
@@ -420,15 +420,15 @@ cc_recv_get_config_reply(ofmsg_recv_t *ort)
 }
 
 
-int
-cc_recv_flow_removed(ofmsg_recv_t *ort)
+static int
+cc_recv_flow_removed(trans_info_t *tit)
 {
 
 	int ret;
 	buffer* recv_data;
 	struct ofp_flow_removed *ofr;
 
-	recv_data = dequeue_message(ort->rmq);
+	recv_data = tit->recv_buf;
 	ret = validate_flow_mod(recv_data);
 	if(ret < 0)
 	{
@@ -437,11 +437,11 @@ cc_recv_flow_removed(ofmsg_recv_t *ort)
 	}
     
     ofr = (struct ofp_flow_removed*)(recv_data->data);
-	*(ort->xid_latest) = ntohl(ofr->header.xid) + 1;
+	*(tit->xid_latest) = ntohl(ofr->header.xid) + 1;
 	log_info_for_cc("recv a flow removed msg");
     
-	ret = cc_insert_to_app_queue(ort->amq, recv_data);
-	if(ret < 0)
+	ret = cc_insert_to_app_queue(tit->app_queue, recv_data);
+	if(ret == CC_E_ERR)
 	{
 		log_err_for_cc("cc_insert_to_app_queue error!");
 		free_buffer(recv_data);
@@ -452,8 +452,8 @@ cc_recv_flow_removed(ofmsg_recv_t *ort)
 }
 
 
-int
-cc_recv_barrier_reply(oomsg_recv_t *ort)
+static int
+cc_recv_barrier_reply(trans_info_t *tit)
 {
 	int ret;
 	buffer* recv_data;
@@ -461,7 +461,7 @@ cc_recv_barrier_reply(oomsg_recv_t *ort)
 	xid_entry *recv_xid;
     uint32_t xid;
     
-	recv_data = dequeue_message(ort->rmq);		
+	recv_data = tit->recv_buf;		
 	ret = validate_barrier_reply(recv_data);
 	if(ret < 0)
 	{
@@ -471,16 +471,16 @@ cc_recv_barrier_reply(oomsg_recv_t *ort)
     
     obr = (struct ofp_header*)(recv_data->data);
     xid = ntohl(obr->header.xid);
-    if(!(recv_xid = cc_lookup_xid_entry(ort->xid_table_, xid))){
+    if(!(recv_xid = cc_lookup_xid_entry(tit->xid_table_, xid))){
         free_buffer(recv_data);
         return CC_E_ERR;
     }
-	CC_ERROR_RETURN(cc_delete_xid_entry(ort->xid_table_, recv_xid));
-	*(ort->xid_latest) = xid + 1;
+	CC_ERROR_RETURN(cc_delete_xid_entry(tit->xid_table_, recv_xid));
+	*(tit->xid_latest) = xid + 1;
 	log_info_for_cc("recv a barrier reply");
     
-	ret = cc_insert_to_app_queue(ort->amq, recv_data);
-	if(ret < 0)
+	ret = cc_insert_to_app_queue(tit->app_queue, recv_data);
+	if(ret == CC_E_ERR)
 	{
 		log_err_for_cc("cc_insert_to_app_queue error!");
 		free_buffer(recv_data);
@@ -491,8 +491,8 @@ cc_recv_barrier_reply(oomsg_recv_t *ort)
 }
 
 
-int
-cc_recv_features_reply(ofmsg_recv_t *ort)
+static int
+cc_recv_features_reply(trans_info_t *tit)
 {
 	int ret;
 	size_t n_ports;
@@ -501,7 +501,7 @@ cc_recv_features_reply(ofmsg_recv_t *ort)
 	xid_entry *recv_xid;
     uint32_t xid;
     
-	recv_data = dequeue_message(ort->rmq);
+	recv_data = tit->recv_buf;
 	ret = validate_error(recv_data);
 	if( ret < 0 )
 	{
@@ -512,18 +512,18 @@ cc_recv_features_reply(ofmsg_recv_t *ort)
 	log_info_for_cc("get the feature reply from the switch");
 	feat_rep = (struct ofp_switch_features)(recv_data->data);
     xid = ntohl(feat_rep->header.xid);
-    if(!(recv_xid = cc_lookup_xid_entry(ort->xid_table_, xid))){
+    if(!(recv_xid = cc_lookup_xid_entry(tit->xid_table_, xid))){
         free_buffer(recv_data);
         return CC_E_ERR;
     }
-	CC_ERROR_RETURN(cc_delete_xid_entry(ort->xid_table_, recv_xid));   
-	*(ort->xid_latest) = xid + 1;
+	CC_ERROR_RETURN(cc_delete_xid_entry(tit->xid_table_, recv_xid));   
+	*(tit->xid_latest) = xid + 1;
 
-    cc_switch->dpid			= ntohll(feat_rep->datapath_id);
-	cc_switch->version     	= ntohl(feat_rep->header.version);
-	cc_switch->n_buffers 	= ntohs(feat_rep->n_buffers);
-	cc_switch->actions   	= ntohl(feat_rep->actions);
-	cc_switch->capabilities = ntohl(feat_rep->capabilities);
+    tit->sw_info->dpid			= ntohll(feat_rep->datapath_id);
+	tit->sw_info->version     	= ntohl(feat_rep->header.version);
+	tit->sw_info->n_buffers 	= ntohs(feat_rep->n_buffers);
+	tit->sw_info->actions   	= ntohl(feat_rep->actions);
+	tit->sw_info->capabilities  = ntohl(feat_rep->capabilities);
 	
 	n_ports = ((ntohs(feat_rep->header.length) - offsetof(struct ofp_switch_features, ports))/ sizeof *feat_rep->ports);
 	if(n_ports > CC_MAX_PORT)
@@ -558,14 +558,14 @@ cc_recv_features_reply(ofmsg_recv_t *ort)
 	return CC_E_NONE;
 }
 
-int
-cc_recv_packet_in(ofmsg_recv_t *ort)
+static int
+cc_recv_packet_in(trans_info_t *tit)
 {
 	int ret;
 	buffer* recv_data;
 	struct ofp_packet_in *opi;
     
-	recv_data = dequeue_message(ort->rmq);	
+	recv_data = tit->recv_buf;	
 	ret = validate_packet_in(recv_data);
 	if( ret < 0 )
 	{
@@ -573,10 +573,10 @@ cc_recv_packet_in(ofmsg_recv_t *ort)
 		return CC_E_ERR;
 	}
     opi = (struct ofp_packet_in*)(recv_data->data);
-    *(ort->xid_latest) = ntohl(opi->header.xid) + 1;
+    *(tit->xid_latest) = ntohl(opi->header.xid) + 1;
 
 	log_info_for_cc("recv packet-in msg from switch");
-	ret = cc_insert_to_app_queue(ort->amq, recv_data);
+	ret = cc_insert_to_app_queue(tit->app_queue, recv_data);
 	if( ret < 0 )
 	{
 		log_err_for_cc("cc_insert_to_app_queue error!");
@@ -587,14 +587,14 @@ cc_recv_packet_in(ofmsg_recv_t *ort)
 	return CC_E_NONE;
 }
 
-int
-cc_recv_port_status(ofmsg_recv_t *ort)
+static int
+cc_recv_port_status(trans_info_t *tit)
 {
 	int ret;
 	buffer* recv_data;
 	struct ofp_port_status *ops;
 
-	recv_data = dequeue_message(ort->rmq);		
+	recv_data = tit->recv_buf;		
 	ret = validate_port_status(recv_data);
 	if(ret < 0)
 	{
@@ -602,10 +602,10 @@ cc_recv_port_status(ofmsg_recv_t *ort)
 		return CC_E_ERR;
 	}
     ops = (struct ofp_port_status *)(recv_data->data);
-    *(ort->xid_latest) = ntohl(ops->header.xid) + 1;
+    *(tit->xid_latest) = ntohl(ops->header.xid) + 1;
 	
 	log_info_for_cc("recv a port status");
-	ret = cc_insert_to_app_queue(ort->amq, recv_data);
+	ret = cc_insert_to_app_queue(tit->app_queue, recv_data);
 	if(ret < 0)
 	{
 		log_err_for_cc("cc_insert_to_app_queue error!");
@@ -617,8 +617,8 @@ cc_recv_port_status(ofmsg_recv_t *ort)
 }
 
 
-int
-cc_recv_stats_reply(ofmsg_recv_t *ort)
+static int
+cc_recv_stats_reply(trans_info_t *tit)
 {
 	int ret;
 	buffer* recv_data;
@@ -626,7 +626,7 @@ cc_recv_stats_reply(ofmsg_recv_t *ort)
 	xid_entry *recv_xid;
 	uint32_t xid;
     
-	recv_data = dequeue_message(ort->rmq);	
+	recv_data = tit->recv_buf;	
 	ret = validate_stats_reply(recv_data);
 	if( ret < 0 )
 	{
@@ -636,15 +636,15 @@ cc_recv_stats_reply(ofmsg_recv_t *ort)
     
     osr = (struct ofp_stats_reply*)(recv_data->data);
     xid = ntohl(osr->header.xid);
-    if(!(recv_xid = cc_lookup_xid_entry(ort->xid_table_, xid))){
+    if(!(recv_xid = cc_lookup_xid_entry(tit->xid_table_, xid))){
         free_buffer(recv_data);
         return CC_E_ERR;
     }
-	CC_ERROR_RETURN(cc_delete_xid_entry(ort->xid_table_, recv_xid));
-	*(ort->xid_latest) = xid + 1;
+	CC_ERROR_RETURN(cc_delete_xid_entry(tit->xid_table_, recv_xid));
+	*(tit->xid_latest) = xid + 1;
     
 	log_info_for_cc("recv a stats reply");
-	ret = cc_insert_to_app_queue(ort->amq, recv_data);
+	ret = cc_insert_to_app_queue(tit->app_queue, recv_data);
 	if( ret < 0 )
 	{
 		log_err_for_cc("cc_insert_to_app_queue error!");
@@ -656,8 +656,8 @@ cc_recv_stats_reply(ofmsg_recv_t *ort)
 }
 
 
-int
-cc_recv_flow_stats_reply(ofmsg_recv_t *ort)
+static int
+cc_recv_flow_stats_reply(trans_info_t *tit)
 {
 	int ret;
 	buffer* recv_data;
@@ -665,7 +665,7 @@ cc_recv_flow_stats_reply(ofmsg_recv_t *ort)
     xid_entry *recv_xid;
 	uint32_t xid;
 
-	recv_data = dequeue_message(ort->rmq);	
+	recv_data = tit->recv_buf;	
 	ret = validate_flow_stats_reply(recv_data);
 	if(ret < 0)
 	{
@@ -675,15 +675,15 @@ cc_recv_flow_stats_reply(ofmsg_recv_t *ort)
  
 	osr = (struct ofp_stats_reply*)(recv_data->data);
     xid = ntohl(osr->header.xid);
-    if(!(recv_xid = cc_lookup_xid_entry(ort->xid_table_, xid))){
+    if(!(recv_xid = cc_lookup_xid_entry(tit->xid_table_, xid))){
         free_buffer(recv_data);
         return CC_E_ERR;
     }
-	CC_ERROR_RETURN(cc_delete_xid_entry(ort->xid_table_, recv_xid));
-	*(ort->xid_latest) = xid + 1;
+	CC_ERROR_RETURN(cc_delete_xid_entry(tit->xid_table_, recv_xid));
+	*(tit->xid_latest) = xid + 1;
     
 	log_info_for_cc("recv a flow stats reply");
-	ret = cc_insert_to_app_queue(ort->amq, recv_data);
+	ret = cc_insert_to_app_queue(tit->app_queue, recv_data);
 	if( ret < 0 )
 	{
 		log_err_for_cc("cc_insert_to_app_queue error!");
@@ -696,6 +696,7 @@ cc_recv_flow_stats_reply(ofmsg_recv_t *ort)
 
 
 const struct cc_recv_ops_s cc_recv_ops = {
+        .version                = CC_OFP_VER_1_0,
     	.recv_hello 			= cc_recv_hello_msg,
         .recv_error 			= cc_recv_err_msg,
         .recv_echo_request 		= cc_recv_echo_request,

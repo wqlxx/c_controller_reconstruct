@@ -20,6 +20,22 @@
 
 #include "cc_queue.h"
 
+int
+queue_is_empty(message_queue *queue)
+{
+  	pthread_mutex_lock(queue->queue_lock);
+    if(queue->length == 0)
+    {    
+        pthread_mutex_unlock(queue->queue_lock);
+        return CC_E_NONE;
+    }
+    
+  	pthread_mutex_unlock(queue->queue_lock);
+
+    return CC_E_ERR;
+
+}
+
 message_queue *
 create_message_queue( void ) {
 	message_queue *new_queue = (message_queue *)malloc( sizeof( message_queue ) );
@@ -62,24 +78,31 @@ delete_message_queue( message_queue *queue ) {
     	element = queue->head->next;
     	if ( element != NULL ){
             if( element->data != NULL ){ 
-      			free_buffer( element->data );
                 queue->head->next = queue->head->next->next; 
-            	free_message_element(element);
+      			free_buffer(element->data);
+                free_message_element(element)
             }else{
-            	queue->head->next = queue->head->next->next; 
             	free_message_element(element);
 			}
-        }else{
-            goto FREE_QUEUE;
-		}
+        }
+        
     }
-    goto FREE_QUEUE;
 
-FREE_QUEUE:
-    free_message_element(queue->head);
-    free(queue);
+    if(queue->head != NULL)
+        free_message_element(queue->head);
+    else
+        pthread_mutex_unlock(queue->queue_lock);
+        return CC_E_ERR;
+    
+    if(queue != NULL)
+        pthread_mutex_unlock(queue->queue_lock);
+        pthread_mutex_destory(queue->queue_lock);
+        free(queue);
+        return CC_E_NONE
+    else
+        pthread_mutex_unlock(queue->queue_lock);        
+        return CC_E_ERR;   
 
-  	return CC_E_NONE;
 }
 
 

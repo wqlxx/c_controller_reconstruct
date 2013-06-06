@@ -20,7 +20,7 @@
 
 #include "cc_of_msg_check.h"
 
- int
+int
 validate_header( const buffer *message, const uint8_t type,
                  const uint16_t min_length, const uint16_t max_length ) {
 	struct ofp_header *header;

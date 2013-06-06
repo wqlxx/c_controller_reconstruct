@@ -33,8 +33,6 @@ struct msg_for_app {
 };
 typedef struct msg_for_app msg_for_app;
 
-
-
 int cc_of_handler_recv_event(sw_info* cc_sw_info);
 
 int cc_of_handler_send_event(sw_info* cc_sw_info);

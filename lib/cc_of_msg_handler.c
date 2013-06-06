@@ -22,11 +22,11 @@
 
 
 int 
-cc_of_handler_recv_event(message_queue *mq)
+cc_of_handler_recv_event(sw_info *cc_sw_info)
 {
 	int ret;
-	ret = cc_secure_channel_read(mq);
-	if( ret < 0 )
+	ret = cc_secure_channel_read(cc_sw_info);
+	if(ret == CC_E_ERR)
 	{
 		log_err_for_cc("recv_from_secure_channel error!");
 		return CC_E_ERR;
@@ -37,12 +37,12 @@ cc_of_handler_recv_event(message_queue *mq)
 
 
 int
-cc_of_handler_send_event(message_queue *mq)
+cc_of_handler_send_event(sw_info *cc_sw_info)
 {
 	int ret;
 	
-	ret = cc_flush_to_secure_channel(mq);
-	if( ret < 0 )
+	ret = cc_flush_to_secure_channel(cc_sw_info);
+	if(ret == CC_E_ERR)
 	{
 		log_err_for_cc("cc_flush_to_secure_channel error");
 		return CC_E_ERR;
